@@ -141,6 +141,9 @@ protected:
     string          gl3FragmentShader; // Simply ignore setting this if you want a passthrough shader! :D
 
     // Geometry shaders not supported at the moment!
+
+	ofVboMesh quad;
+	void createQuad(float width, float height);
 };
 
 #endif

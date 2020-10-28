@@ -228,7 +228,10 @@ void ofxFXObject::selectShaderSource(){
                 vertexShader += STRINGIFY(
                         uniform mat4 modelViewProjectionMatrix;
                         in vec4 position;
+						in vec2 texcoord;
+						out vec2 vtexcoord;
                         void main(){
+							vtexcoord = texcoord;
                             gl_Position = modelViewProjectionMatrix * position;
                         });
             }
@@ -292,13 +295,23 @@ bool ofxFXObject::compileCode(){
             initFbo(textures[i], width, height, internalFormat);
         }
     }
-    
+
     // Compile the shader and load it to the GPU
-    shader.unload();
-    shader.setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentShader);
-    if (vertexShader.empty() == false)
-        shader.setupShaderFromSource(GL_VERTEX_SHADER, vertexShader);
-    bFine = shader.linkProgram();
+	if (!ofIsGLProgrammableRenderer()) {
+		shader.unload();
+		shader.setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentShader);
+		if (vertexShader.empty() == false)
+			shader.setupShaderFromSource(GL_VERTEX_SHADER, vertexShader);
+		bFine = shader.linkProgram();
+	}
+	else {
+		shader.unload();
+		shader.setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentShader);
+		if (vertexShader.empty() == false)
+			shader.setupShaderFromSource(GL_VERTEX_SHADER, vertexShader);
+		shader.bindDefaults();
+		bFine = shader.linkProgram();
+	}    
     
     return bFine;
 }
@@ -442,18 +455,37 @@ void ofxFXObject::initFbo(ofFbo & _fbo, int _width, int _height, int _internalfo
 void ofxFXObject::renderFrame(float _width, float _height){
     if (_width == -1) _width = width;
     if (_height == -1) _height = height;
+
+	// If the shader is not well compiled it will show an image little more gray.
+	//
+	if (bFine)
+		ofSetColor(255, 255);
+	else
+		ofSetColor(150, 255);
     
-    // If the shader is not well compiled it will show an image little more gray.
-    //
-    if (bFine)
-        ofSetColor(255,255);  
-    else
-        ofSetColor(150,255);
-    
-    glBegin(GL_QUADS);
-    glTexCoord2f(0, 0); glVertex3f(0, 0, 0);
-    glTexCoord2f(_width, 0); glVertex3f(_width, 0, 0);
-    glTexCoord2f(_width, _height); glVertex3f(_width, _height, 0);
-    glTexCoord2f(0,_height);  glVertex3f(0,_height, 0);
-    glEnd();
+	if (ofIsGLProgrammableRenderer()) {
+		if (quad.getNumVertices() == 0) {
+			createQuad(_width, _height);
+		}
+
+		quad.draw(OF_MESH_FILL);
+	}
+	else {
+		glBegin(GL_QUADS);
+		glTexCoord2f(0, 0); glVertex3f(0, 0, 0);
+		glTexCoord2f(_width, 0); glVertex3f(_width, 0, 0);
+		glTexCoord2f(_width, _height); glVertex3f(_width, _height, 0);
+		glTexCoord2f(0, _height);  glVertex3f(0, _height, 0);
+		glEnd();
+	}
+}
+
+
+void ofxFXObject::createQuad(float width, float height) {
+	quad.clear();
+	quad.setMode(OF_PRIMITIVE_TRIANGLE_FAN);
+	quad.addVertex(glm::vec3(0, 0, 0));			 quad.addTexCoord(glm::vec2(0, 0));
+	quad.addVertex(glm::vec3(width, 0, 0));		 quad.addTexCoord(glm::vec2(width, 0));
+	quad.addVertex(glm::vec3(width, height, 0)); quad.addTexCoord(glm::vec2(width, height));
+	quad.addVertex(glm::vec3(0, height, 0));	 quad.addTexCoord(glm::vec2(0, height));
 }
