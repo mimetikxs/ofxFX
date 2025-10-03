@@ -445,7 +445,7 @@ void ofxFXObject::draw(int _x, int _y, float _width, float _height){
 void ofxFXObject::initFbo(ofFbo & _fbo, int _width, int _height, int _internalformat) {
     _fbo.allocate(_width, _height, _internalformat);
     _fbo.begin();
-    ofClear(0,0);
+    ofClearFloat(0,0);
     _fbo.end();
 }
 
